@@ -124,7 +124,6 @@ async function main() {
     await prisma.cl_existentes.deleteMany({ where: { nombre_cl: { startsWith: `${tag} CL ` } } });
     await prisma.inventario_tics.deleteMany({ where: { nombre: { startsWith: tag } } });
     await prisma.notificaciones.deleteMany({ where: { titulo: { startsWith: tag } } });
-    await prisma.fcm_tokens.deleteMany({ where: { token: { startsWith: tag } } });
     await prisma.carga_car_tics.deleteMany({ where: { operador: { startsWith: tag } } });
     await prisma.uso_car_tics.deleteMany({ where: { conductor: { startsWith: tag } } });
 

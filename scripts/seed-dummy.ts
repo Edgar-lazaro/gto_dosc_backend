@@ -364,16 +364,6 @@ async function main() {
       })),
     });
 
-    // Legacy: fcm_tokens
-    await prisma.fcm_tokens.createMany({
-      data: legacyUsers.slice(0, 3).map((u, idx) => ({
-        usuario_id: u.id,
-        token: `${tag}_fcm_token_${idx + 1}`,
-        dispositivo_info: 'android',
-        activo: true,
-      })),
-    });
-
     // Legacy: combustible (nombre is now core User uuid)
     if (legacyUsers.length > 0) {
       await prisma.combustible.create({

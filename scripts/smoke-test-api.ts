@@ -99,7 +99,6 @@ async function main() {
     { name: 'jefaturas', path: '/api/jefaturas' },
     { name: 'checklists', path: '/api/checklists' },
     { name: 'notificaciones(legacy)', path: '/api/notificaciones' },
-    { name: 'fcm-tokens', path: '/api/fcm-tokens' },
     { name: 'inventario-tics', path: '/api/inventario-tics' },
     { name: 'inventario-mantto', path: '/api/inventario-mantto' },
     { name: 'combustible', path: '/api/combustible' },
