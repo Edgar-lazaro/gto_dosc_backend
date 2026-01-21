@@ -1,0 +1,26 @@
+[Unit]
+Description=GTO Docs Backend API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/gto_docs_backend
+EnvironmentFile=/opt/gto_docs_backend/.env
+# Ensure production mode
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node /opt/gto_docs_backend/dist/main.js
+Restart=always
+RestartSec=3
+
+# Hardening (safe defaults)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+# Allow writing uploads directory
+# If you store uploads in a NAS/NFS mount, add that mount path here and set UPLOADS_DIR in /opt/gto_docs_backend/.env
+ReadWritePaths=/opt/gto_docs_backend/uploads
+
+[Install]
+WantedBy=multi-user.target

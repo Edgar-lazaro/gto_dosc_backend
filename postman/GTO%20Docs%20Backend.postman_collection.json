@@ -1,0 +1,224 @@
+{
+  "info": {
+    "_postman_id": "5c0e5f8c-9e4a-4f37-93a5-2c225d6c2f6f",
+    "name": "GTO Docs Backend (Intranet)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 - Health",
+      "item": [
+        {
+          "name": "GET /api/health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/health/db",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/health/db",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health", "db"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 - Auth",
+      "item": [
+        {
+          "name": "POST /api/auth/login (sets token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login ok', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201]);",
+                  "});",
+                  "const data = pm.response.json();",
+                  "if (data && data.token) {",
+                  "  pm.environment.set('token', data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/auth/me",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Inventarios",
+      "item": [
+        {
+          "name": "GET /api/inventario-tics?gerencia={{gerenciaId}}",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (Array.isArray(data) && data.length > 0 && data[0].id != null) {",
+                  "    pm.environment.set('inventarioTicsId', String(data[0].id));",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/inventario-tics?gerencia={{gerenciaId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventario-tics"],
+              "query": [{ "key": "gerencia", "value": "{{gerenciaId}}" }]
+            }
+          }
+        },
+        {
+          "name": "GET /api/inventario-mantto?gerencia={{gerenciaId}}",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/inventario-mantto?gerencia={{gerenciaId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventario-mantto"],
+              "query": [{ "key": "gerencia", "value": "{{gerenciaId}}" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Tareas (v2)",
+      "item": [
+        {
+          "name": "GET /api/tareas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (Array.isArray(data) && data.length > 0 && data[0].id != null) {",
+                  "    pm.environment.set('tareaId', String(data[0].id));",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/tareas",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tareas"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/tareas (create)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Prueba Postman\",\n  \"descripcion\": \"Creada desde Postman\",\n  \"usuario_asignado\": \"PEGAR_USER_ID_AQUI\",\n  \"estatus\": \"pendiente\",\n  \"fecha_limite\": \"2026-01-31\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tareas",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tareas"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/tareas/:id (uses {{tareaId}})",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/tareas/{{tareaId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tareas", "{{tareaId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Catálogos",
+      "item": [
+        {
+          "name": "GET /api/gerencias",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/gerencias", "host": ["{{baseUrl}}"], "path": ["api", "gerencias"] }
+          }
+        },
+        {
+          "name": "GET /api/jefaturas",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/jefaturas", "host": ["{{baseUrl}}"], "path": ["api", "jefaturas"] }
+          }
+        },
+        {
+          "name": "GET /api/cargos",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/cargos", "host": ["{{baseUrl}}"], "path": ["api", "cargos"] }
+          }
+        }
+      ]
+    }
+  ]
+}

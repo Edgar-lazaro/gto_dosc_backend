@@ -1,0 +1,268 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String                @id @default(uuid())
+  username             String                @unique
+  passwordHash         String
+  nombre               String
+  apellido             String?
+  area                 String
+  createdAt            DateTime              @default(now())
+  email                String
+  updatedAt            DateTime              @updatedAt
+  gerenciaId           Int?                  @db.SmallInt
+  jefaturaId           BigInt?
+  cargoId              Int?
+  cargoLegacy          String?
+  documentos_pdf       documentos_pdf[]
+  combustible          combustible[]
+  notificaciones       notificaciones[]
+  tarea_asignaciones   tarea_asignaciones[]
+  tarea_avances        tarea_avances[]
+  tareasAsignadoPor    tareas[]              @relation("tareas_asignado_porToUser")
+  tareasUsuarioAsignado tareas[]             @relation("tareas_usuario_asignadoToUser")
+  gerencia             gerencias?            @relation(fields: [gerenciaId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  jefatura             jefaturas?            @relation(fields: [jefaturaId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cargo                cargos?               @relation(fields: [cargoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model SyncQueue {
+  id        Int      @id @default(autoincrement())
+  entidad   String
+  entidadId String
+  accion    String
+  payload   Json?
+  status     String   @default("pending")
+  retries    Int      @default(0)
+  maxRetries Int      @default(20)
+  lastError  String?
+  nextRunAt  DateTime? @db.Timestamptz(6)
+  lockedAt   DateTime? @db.Timestamptz(6)
+  processedAt DateTime? @db.Timestamptz(6)
+  procesado  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model carga_car_tics {
+  id          BigInt   @id @default(autoincrement())
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  operador    String
+  km_bf_carga String
+  foto_km_bf  Bytes
+  km_af_carga String
+  foto_km_af  Bytes
+  vehiculo    String
+  foto_ticket Bytes
+
+  vehiculoRef vehiculos @relation(fields: [vehiculo], references: [nombre_clave], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model cargos {
+  id           Int        @id @default(autoincrement())
+  created_at   DateTime   @default(now()) @db.Timestamptz(6)
+  nombre_cargo String?
+  nivel_cargo  String?
+  usuarios     User[]
+}
+
+model cl_existentes {
+  id        BigInt    @id @default(autoincrement())
+  nombre_cl String
+  gerencia  Int       @db.SmallInt
+  jefatura  BigInt
+  funcion_form String  @default("FilesEdit_manto") @db.Text
+  gerencias gerencias @relation(fields: [gerencia], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  jefaturas jefaturas @relation(fields: [jefatura], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model combustible {
+  id         BigInt   @id @default(autoincrement())
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  hora_ini   DateTime @db.Timetz(6)
+  hora_final DateTime @db.Timetz(6)
+  nombre     String
+  km_inicio  Decimal  @db.Decimal
+  lvl_km_ini Decimal  @db.Decimal
+  destino    String
+  km_final   Decimal  @db.Decimal
+  lvl_km_fin Decimal  @db.Decimal
+  foto_ini   Json     @db.Json
+  foto_fin   Json     @db.Json
+  User       User     @relation(fields: [nombre], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model documentos_pdf {
+  id               BigInt   @id @default(autoincrement())
+  nombre_archivo   String
+  tipo_documento   String
+  url_storage      String
+  usuario_id       String
+  usuario_nombre   String
+  gerencia_id      Int
+  jefatura_id      Int
+  checklist_nombre String
+  fecha_creacion   DateTime @default(now()) @db.Timestamptz(6)
+  tamano_bytes     BigInt?
+  User             User     @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_documentos_pdf_usuario")
+}
+
+model gerencias {
+  id               Int               @id @default(autoincrement()) @db.SmallInt
+  created_at       DateTime          @default(now()) @db.Timestamptz(6)
+  nombre           String            @unique @db.VarChar
+  tabla_inventario String?
+  carga_gas        String?
+  uso_car          String?
+  cl_existentes    cl_existentes[]
+  inventario_tics  inventario_tics[]
+  inventario_mantto inventario_mantto[]
+  jefaturas        jefaturas[]
+  usuarios         User[]
+  vehiculos        vehiculos[]
+}
+
+model inventario_tics {
+  id                  BigInt     @id @default(autoincrement())
+  nombre              String     @db.VarChar
+  descripcion         String?
+  cantidad            Int?       @default(0)
+  precio              Decimal?   @db.Decimal
+  categoria           String?    @db.VarChar
+  estado              String?    @default("disponible") @db.VarChar
+  ubicacion           String?    @db.VarChar
+  gerencia            Int?
+  jefatura            BigInt?
+  img                 String?
+  fecha_registro      DateTime?  @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion DateTime?  @default(now()) @db.Timestamptz(6)
+  created_at          DateTime?  @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?  @default(now()) @db.Timestamptz(6)
+  gerencias           gerencias? @relation(fields: [gerencia], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  jefaturas           jefaturas? @relation(fields: [jefatura], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model inventario_mantto {
+  id                  BigInt     @id @default(autoincrement())
+  nombre              String     @db.VarChar
+  descripcion         String?
+  cantidad            Int?       @default(0)
+  precio              Decimal?   @db.Decimal
+  categoria           String?    @db.VarChar
+  estado              String?    @default("disponible") @db.VarChar
+  ubicacion           String?    @db.VarChar
+  gerencia            Int?
+  jefatura            BigInt?
+  img                 String?
+  fecha_registro      DateTime?  @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion DateTime?  @default(now()) @db.Timestamptz(6)
+  created_at          DateTime?  @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?  @default(now()) @db.Timestamptz(6)
+
+  gerencias gerencias? @relation(fields: [gerencia], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  jefaturas jefaturas? @relation(fields: [jefatura], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model jefaturas {
+  id              BigInt            @id @default(autoincrement())
+  created_at      DateTime          @default(now()) @db.Timestamptz(6)
+  nombre_jefatura String?
+  gerencia        Int               @db.SmallInt
+  img             String?
+  cl_existentes   cl_existentes[]
+  inventario_tics inventario_tics[]
+  inventario_mantto inventario_mantto[]
+  gerencias       gerencias         @relation(fields: [gerencia], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuarios        User[]
+}
+
+model notificaciones {
+  id                BigInt    @id @default(autoincrement())
+  usuario_id        String
+  tipo              String
+  titulo            String
+  mensaje           String
+  datos_adicionales Json?
+  leida             Boolean?  @default(false)
+  fecha_envio       DateTime? @default(now()) @db.Timestamptz(6)
+  fecha_lectura     DateTime? @db.Timestamptz(6)
+  User              User      @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model tarea_asignaciones {
+  id               BigInt    @id @default(autoincrement())
+  tarea_id         BigInt
+  usuario_id       String
+  fecha_asignacion DateTime? @default(now()) @db.Timestamptz(6)
+  tareas           tareas    @relation(fields: [tarea_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  User             User      @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model tarea_avances {
+  id             BigInt    @id @default(autoincrement())
+  tarea_id       BigInt
+  usuario_id     String
+  descripcion    String?
+  imagenes       String[]
+  fecha_creacion DateTime  @default(now()) @db.Timestamptz(6)
+  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+  tareas         tareas    @relation(fields: [tarea_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  User           User      @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model tareas {
+  id                                         BigInt               @id @default(autoincrement())
+  titulo                                     String
+  descripcion                                String?
+  estatus                                    String               @default("pendiente")
+  fecha_creacion                             DateTime             @default(now()) @db.Timestamptz(6)
+  fecha_limite                               DateTime?            @db.Date
+  usuario_asignado                           String
+  asignado_por                               String
+  created_at                                 DateTime?            @default(now()) @db.Timestamptz(6)
+  updated_at                                 DateTime?            @default(now()) @db.Timestamptz(6)
+  tarea_asignaciones                         tarea_asignaciones[]
+  tarea_avances                              tarea_avances[]
+  asignadoPor                                User                @relation("tareas_asignado_porToUser", fields: [asignado_por], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuarioAsignado                            User                @relation("tareas_usuario_asignadoToUser", fields: [usuario_asignado], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model uso_car_tics {
+  id                  BigInt   @id @default(autoincrement())
+  created_at          DateTime @default(now()) @db.Timestamptz(6)
+  conductor           String
+  destino             String
+  hora_inicio         String
+  nivel_combustible   String
+  kilometraje_inicial String
+  foto_km_inicial     Bytes?
+  hora_final          String
+  kilometraje_final   String
+  foto_km_final       Bytes?
+
+  vehiculo    String
+  vehiculoRef vehiculos @relation(fields: [vehiculo], references: [nombre_clave], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model vehiculos {
+  id            BigInt   @id @default(autoincrement())
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  marca         String
+  modelo        String
+  placas        String
+  gerencia      String   @db.VarChar
+  nombre_clave  String   @unique
+
+  gerenciaRef   gerencias @relation(fields: [gerencia], references: [nombre], onDelete: NoAction, onUpdate: NoAction)
+  uso_car_tics  uso_car_tics[]
+  carga_car_tics carga_car_tics[]
+}

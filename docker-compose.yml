@@ -1,0 +1,11 @@
+services:
+  gto_docs_backend:
+    build: .
+    image: gto_docs_backend:latest
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./uploads:/app/uploads
+    restart: unless-stopped

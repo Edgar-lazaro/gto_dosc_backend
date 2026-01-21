@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "node_modules",
+    "test",
+    "dist",
+    "**/*spec.ts",
+    "scripts",
+    "src/core-roles/**",
+    "src/usuarios/**",
+    "src/fcm-tokens/**"
+  ]
+}
