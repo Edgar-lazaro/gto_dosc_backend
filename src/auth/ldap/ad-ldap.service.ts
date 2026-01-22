@@ -94,6 +94,115 @@ export class AdLdapService {
     });
   }
 
+  private searchUserInfo(client: ldap.Client, baseDn: string, username: string): Promise<{
+    dn: string;
+    cn?: string;
+    displayName?: string;
+    givenName?: string;
+    sn?: string;
+    mail?: string;
+  } | null> {
+    const filter = `(&(objectClass=user)(sAMAccountName=${escapeLdapFilter(username)}))`;
+
+    return new Promise((resolve, reject) => {
+      client.search(
+        baseDn,
+        {
+          scope: 'sub',
+          filter,
+          paged: false,
+          sizeLimit: 1,
+          attributes: ['dn', 'cn', 'displayName', 'givenName', 'sn', 'mail'],
+        },
+        (err, res) => {
+          if (err) return reject(err);
+
+          let found: {
+            dn: string;
+            cn?: string;
+            displayName?: string;
+            givenName?: string;
+            sn?: string;
+            mail?: string;
+          } | null = null;
+
+          res.on('searchEntry', (entry) => {
+            const dn = (entry?.objectName as unknown as string) ?? (entry?.dn as unknown as string);
+            if (dn && !found) {
+              const attrs = entry.attributes || [];
+              const getAttr = (name: string): string | undefined => {
+                const attr = attrs.find((a: any) => a.type === name || a._name === name);
+                if (!attr) return undefined;
+                const values = attr.values || [];
+                return values.length > 0 ? String(values[0]) : undefined;
+              };
+
+              found = {
+                dn,
+                cn: getAttr('cn'),
+                displayName: getAttr('displayName'),
+                givenName: getAttr('givenName'),
+                sn: getAttr('sn'),
+                mail: getAttr('mail'),
+              };
+            }
+          });
+          res.on('error', (e) => reject(e));
+          res.on('end', () => resolve(found));
+        },
+      );
+    });
+  }
+
+  async getUserInfo(username: string): Promise<{
+    nombre: string;
+    apellido?: string;
+    email: string;
+  } | null> {
+    if (!this.isEnabled()) return null;
+    if (!username) return null;
+
+    const baseDn = (this.config.get<string>('AD_BASE_DN') ?? '').trim();
+    const serviceBindDn = (this.config.get<string>('AD_SERVICE_BIND_DN') ?? '').trim();
+    const serviceBindPassword = this.config.get<string>('AD_SERVICE_BIND_PASSWORD') ?? '';
+
+    if (!baseDn || !serviceBindDn || !serviceBindPassword) {
+      this.logger.warn('Cannot get user info from AD: AD_BASE_DN, AD_SERVICE_BIND_DN, and AD_SERVICE_BIND_PASSWORD are required');
+      return null;
+    }
+
+    const client = this.createClient();
+    try {
+      await this.bind(client, serviceBindDn, serviceBindPassword);
+      const userInfo = await this.searchUserInfo(client, baseDn, username);
+
+      if (!userInfo) return null;
+
+      // Construir nombre completo: displayName > cn > givenName
+      let nombre = userInfo.displayName || userInfo.cn || userInfo.givenName || username;
+      const apellido = userInfo.sn || null;
+
+      // Si tenemos givenName pero no displayName/cn, usar givenName como nombre
+      if (!userInfo.displayName && !userInfo.cn && userInfo.givenName) {
+        nombre = userInfo.givenName;
+      }
+
+      // Email es requerido, usar uno por defecto si no está disponible
+      const email = userInfo.mail || `${username}@${this.config.get<string>('AD_UPN_SUFFIX') || 'example.com'}`;
+
+      return {
+        nombre: nombre.trim(),
+        apellido: apellido?.trim() || undefined,
+        email: email.trim(),
+      };
+    } catch (err: any) {
+      this.logger.debug(`Failed to get user info from AD: ${err?.message ?? err}`);
+      return null;
+    } finally {
+      this.unbindQuietly(client);
+    }
+  }
+
   private buildBindCandidates(username: string): string[] {
     const candidates: string[] = [];
 

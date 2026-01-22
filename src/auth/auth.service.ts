@@ -17,10 +17,26 @@ export class AuthService {
     if (!user && this.adLdap.isEnabled()) {
       const ok = await this.adLdap.validateCredentials(username, password);
       if (ok) {
-        // No auto-create: only allow if the user already exists in our DB
+        // Buscar usuario existente en la BD
         user = await this.repo.findUserByUsername(username);
+
+        // Si no existe, crear automáticamente desde AD
         if (!user) {
-          throw new UnauthorizedException('Usuario no autorizado');
+          const adInfo = await this.adLdap.getUserInfo(username);
+          if (adInfo) {
+            try {
+              user = await this.repo.createUserFromAd(username, adInfo);
+            } catch (error: any) {
+              // Si falla la creación (ej: username duplicado por condición de carrera),
+              // intentar buscar de nuevo
+              user = await this.repo.findUserByUsername(username);
+              if (!user) {
+                throw new UnauthorizedException('Error al crear usuario desde Active Directory');
+              }
+            }
+          } else {
+            throw new UnauthorizedException('No se pudo obtener información del usuario desde Active Directory');
+          }
         }
       }
     }
