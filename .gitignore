@@ -57,6 +57,10 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 /generated/prisma
 
+# Newman/Postman reports
+/reports
+/reports/**
+
 # runtime uploads (local dev / NAS mount)
 /uploads
 /uploads/**

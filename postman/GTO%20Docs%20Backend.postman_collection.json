@@ -46,7 +46,7 @@
                   "pm.test('login ok', function () {",
                   "  pm.expect(pm.response.code).to.be.oneOf([200,201]);",
                   "});",
-                  "const data = pm.response.json();",
+                  "var data = pm.response.json();",
                   "if (data && data.token) {",
                   "  pm.environment.set('token', data.token);",
                   "}"
@@ -94,7 +94,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "if (pm.response.code === 200) {",
-                  "  const data = pm.response.json();",
+                  "  var data = pm.response.json();",
                   "  if (Array.isArray(data) && data.length > 0 && data[0].id != null) {",
                   "    pm.environment.set('inventarioTicsId', String(data[0].id));",
                   "  }",
@@ -141,7 +141,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "if (pm.response.code === 200) {",
-                  "  const data = pm.response.json();",
+                  "  var data = pm.response.json();",
                   "  if (Array.isArray(data) && data.length > 0 && data[0].id != null) {",
                   "    pm.environment.set('tareaId', String(data[0].id));",
                   "  }",

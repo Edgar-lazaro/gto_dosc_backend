@@ -5,6 +5,27 @@ Al final se debe poder abrir:
 - `http://IP_DEL_SERVIDOR:3000/api/health`
 - `http://IP_DEL_SERVIDOR:3000/api/docs`
 
+Y si vas a subir/ver adjuntos (uploads), los archivos deben ser accesibles en:
+
+- `http://IP_DEL_SERVIDOR:3000/uploads/...`
+
+## Cambios requeridos en el frontend (app móvil)
+
+En la app móvil normalmente SOLO necesitas apuntar a la IP/host correctos:
+
+1) **Base URL del API** (para login y endpoints):
+
+- `http://IP_DEL_SERVIDOR:3000/api`
+
+2) **Base URL pública** (para abrir archivos adjuntos si la API devuelve links a `/uploads/...`):
+
+- `http://IP_DEL_SERVIDOR:3000`
+
+Notas:
+
+- La diferencia clave es que el API lleva `/api` y los uploads NO.
+- Si la app corre en Android/iOS y apuntas por `http://` (sin TLS), puede requerir permitir *cleartext traffic* (Android) o ajustar ATS (iOS) según cómo esté construida la app.
+
 ## Decisión rápida (elige 1)
 
 Antes de empezar, donde se podran asignar almacenar las fotos, documentos, etc.:
@@ -314,3 +335,87 @@ touch /mnt/gto_uploads/tareas/_prueba_escritura.txt
 - “Permission denied” al subir adjuntos (NAS): permisos/mapeo NFS o falta agregar mount en `ReadWritePaths`
 - `npm ci` falla: revisar proxy/firewall o acceso a registry
 - No conecta a Postgres: revisar `DATABASE_URL` y conectividad a DB
+
+
+
+
+### Pasos para migrar la BD
+
+- Git: https://git-scm.com/download/win
+- Node.js LTS (incluye npm): https://nodejs.org/
+- PostgreSQL (instalador oficial para Windows): https://www.postgresql.org/download/windows/
+	- Durante la instalación anota el password del usuario `postgres` y deja el puerto `5432`.
+
+### 1) Crear la base de datos
+
+Agregar psql en el PATH
+
+```powershell
+psql -U postgres -h localhost -p 5432 -c "CREATE DATABASE gto_docs_bd;"
+```
+
+Si `psql` no existe, agrega al PATH la carpeta `bin` de PostgreSQL (ejemplo):
+
+- `C:\Program Files\PostgreSQL\16\bin`
+
+### 2) Clonar el repo e instalar dependencias (ya realizamos este paso, pero recomieendo borrar todo y volver a instalar para evitar bugs)
+
+```powershell
+git clone <URL_DEL_REPO>
+cd gto_docs_backend
+npm ci
+```
+
+### 3) Configurar variables de entorno (.env)
+
+Crear el archivo `.env` en la raíz del repo con (ajusta el password):
+
+```dotenv
+HOST=0.0.0.0
+PORT=3000
+
+DATABASE_URL=postgresql://postgres:TU_PASSWORD@localhost:5432/gto_docs_bd?schema=public
+
+JWT_SECRET=dev-secret-change-me
+JWT_EXPIRES_IN=13h
+NODE_ENV=development
+
+AD_ENABLED=false
+```
+
+### 4) Ejecutar migraciones Prisma (crear tablas)
+
+```powershell
+npx prisma generate
+npx prisma migrate deploy
+```
+
+### 5) Crear el usuario admin para pruebas mas adelante
+
+```powershell
+npx ts-node scripts/seed-admin.ts admin "admin123" "Administrador" "SISTEMAS" "admin@example.com"
+```
+
+### 6) Verificación rápida
+
+Antes de levantar la API cambiar la ip en los archivos .env, agregar ip del equipo donde se hara la prueba para evitar fallos, esa misma ip se debe agregar en los archivos app_config_dev, _prod, _qa, del frontend para que funcionen las pruebas.
+
+Levantar API:
+
+```powershell
+npm run start:dev
+```
+
+Health:
+
+```powershell
+curl http://localhost:3000/api/health
+```
+
+Login (opcional):
+
+```powershell
+curl -X POST http://localhost:3000/api/auth/login -H "Content-Type: application/json" -d "{\"username\":\"admin\",\"password\":\"admin123\"}"
+```
+
+
