@@ -33,6 +33,23 @@ Antes de empezar, donde se podran asignar almacenar las fotos, documentos, etc.:
 1) Sin NAS/NFS: se guardan en `/opt/gto_docs_backend/uploads`
 2) Con NAS/NFS: se guardan en un mount `/mnt/gto_uploads` y el backend usa `UPLOADS_DIR=/mnt/gto_uploads`
 
+Estructura que usará el backend para separar archivos (tipo + módulo):
+
+- Imágenes de tareas: `.../imagenes/tareas/`
+- Documentos de tareas: `.../documentos/tareas/pdfs/` y `.../documentos/tareas/otros/`
+- (Preparado) Imágenes de reportes: `.../imagenes/reportes/`
+- (Preparado) Documentos de reportes: `.../documentos/reportes/pdfs/` y `.../documentos/reportes/otros/`
+
+Nota: en este proyecto, cuando decimos **reportes** nos referimos a **checklists**. Por compatibilidad, el backend deja creadas ambas rutas:
+
+- `.../imagenes/reportes/` y `.../imagenes/checklists/`
+- `.../documentos/reportes/...` y `.../documentos/checklists/...`
+
+La URL que devuelve la API (ejemplos) quedará como:
+
+- `http://IP_DEL_SERVIDOR:3000/uploads/imagenes/tareas/<archivo>`
+- `http://IP_DEL_SERVIDOR:3000/uploads/documentos/tareas/pdfs/<archivo>`
+
 ## Copy/Paste rápido (solo cambia IPs)
 
 1) Cambia `API_IP` y `NAS_IP` (y solo si aplica, `NAS_EXPORT`):
@@ -197,7 +214,16 @@ sudo mount -a
 Esto debe funcionar (si falla, es tema de permisos/mapeo UID/GID del NFS):
 
 ```bash
-mkdir -p /mnt/gto_uploads/tareas
+mkdir -p \
+	/mnt/gto_uploads/imagenes/tareas \
+	/mnt/gto_uploads/imagenes/reportes \
+	/mnt/gto_uploads/imagenes/checklists \
+	/mnt/gto_uploads/documentos/tareas/pdfs \
+	/mnt/gto_uploads/documentos/tareas/otros \
+	/mnt/gto_uploads/documentos/reportes/pdfs \
+	/mnt/gto_uploads/documentos/reportes/otros \
+	/mnt/gto_uploads/documentos/checklists/pdfs \
+	/mnt/gto_uploads/documentos/checklists/otros
 touch /mnt/gto_uploads/tareas/_prueba_escritura.txt
 ls -la /mnt/gto_uploads/tareas/_prueba_escritura.txt
 ```

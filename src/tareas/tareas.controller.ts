@@ -25,6 +25,11 @@ import { UpdateTareaDto } from './dto/update-tarea.dto';
 import { CreateTareaComentarioDto } from './dto/create-tarea-comentario.dto';
 import { UpdateTareaEstadoDto } from './dto/update-tarea-estado.dto';
 import { CreateTareaAdjuntoDto } from './dto/create-tarea-adjunto.dto';
+import {
+  buildPublicFileUrl,
+  resolveAdjuntoRelativeDir,
+  resolveUploadsRoot,
+} from '../uploads/uploads.util';
 
 @Controller('tareas')
 @UseGuards(JwtGuard)
@@ -69,10 +74,13 @@ export class TareasController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
-        destination: (_req, _file, cb) => {
-          const root = (process.env.UPLOADS_DIR ?? '').trim();
-          const uploadsRoot = root.length > 0 ? path.resolve(root) : path.join(process.cwd(), 'uploads');
-          const dest = path.join(uploadsRoot, 'tareas');
+        destination: (_req, file, cb) => {
+          const uploadsRoot = resolveUploadsRoot();
+          const relative = resolveAdjuntoRelativeDir('tareas', {
+            originalname: file?.originalname,
+            mimetype: file?.mimetype,
+          });
+          const dest = path.join(uploadsRoot, relative);
           try {
             fs.mkdirSync(dest, { recursive: true });
           } catch (err) {
@@ -105,10 +113,12 @@ export class TareasController {
       return this.tareasService.adjuntarLegacy(userId, dto.tareaId, dto.tipo, dto.nombre, null);
     }
 
-    const host = req.get('host');
-    const publicBase = (process.env.PUBLIC_BASE_URL ?? '').trim();
-    const base = publicBase.length > 0 ? publicBase : `${req.protocol}://${host}`;
-    const url = `${base}/uploads/tareas/${file.filename}`;
+    const relative = resolveAdjuntoRelativeDir('tareas', {
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+    });
+
+    const url = buildPublicFileUrl(req, relative, file.filename);
     return this.tareasService.adjuntarLegacy(userId, dto.tareaId, dto.tipo, dto.nombre, url);
   }
 

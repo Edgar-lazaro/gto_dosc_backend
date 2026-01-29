@@ -26,6 +26,8 @@ import { VehiculosModule } from './vehiculos/vehiculos.module';
 import { CoreSyncQueueModule } from './core-sync-queue/core-sync-queue.module';
 import { UsersModule } from './users/users.module';
 import { JwtStrategy } from './auth/strategies/jwt.strategy';
+import { ReportesModule } from './reportes/reportes.module';
+import { ChecklistsModule } from './checklists/checklists.module';
 
 @Module({
   imports: [
@@ -59,6 +61,8 @@ import { JwtStrategy } from './auth/strategies/jwt.strategy';
     VehiculosModule,
     CoreSyncQueueModule,
     UsersModule,
+    ReportesModule,
+    ChecklistsModule,
   ],
   providers: [JwtStrategy],
   controllers: [],

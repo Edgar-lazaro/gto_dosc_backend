@@ -17,6 +17,29 @@ export class TareasService {
     private readonly glpiQueue: GlpiQueueService,
   ) {}
 
+  private async resolveUserIdFromIdOrUsername(value: string): Promise<string> {
+    const raw = String(value ?? '').trim();
+    if (!raw) {
+      throw new BadRequestException('usuario_asignado es requerido');
+    }
+
+    const byId = await this.prisma.user.findUnique({
+      where: { id: raw },
+      select: { id: true },
+    });
+    if (byId) return byId.id;
+
+    const byUsername = await this.prisma.user.findUnique({
+      where: { username: raw },
+      select: { id: true },
+    });
+    if (byUsername) return byUsername.id;
+
+    throw new BadRequestException(
+      `usuario_asignado no existe (ni como User.id ni como User.username): ${raw}`,
+    );
+  }
+
   private isPrivilegedCargo(cargoId: unknown): boolean {
     const id = Number(cargoId);
     return Number.isInteger(id) && (id === 1 || id === 2);
@@ -107,16 +130,7 @@ export class TareasService {
   }
 
   async crear(asignadoPor: string, dto: CreateTareaDto) {
-
-    const assigned = await this.prisma.user.findUnique({
-      where: { id: dto.usuario_asignado },
-      select: { id: true },
-    });
-    if (!assigned) {
-      throw new BadRequestException(
-        `usuario_asignado no existe en User.id: ${dto.usuario_asignado}`,
-      );
-    }
+    const usuarioAsignadoId = await this.resolveUserIdFromIdOrUsername(dto.usuario_asignado);
 
     const legacyCreated = await this.prisma.tareas.create({
       data: {
@@ -124,7 +138,7 @@ export class TareasService {
         descripcion: dto.descripcion,
         estatus: dto.estatus,
         fecha_limite: dto.fecha_limite ? new Date(dto.fecha_limite) : undefined,
-        usuario_asignado: dto.usuario_asignado,
+        usuario_asignado: usuarioAsignadoId,
         asignado_por: asignadoPor,
       },
     });
@@ -153,21 +167,22 @@ export class TareasService {
       throw new BadRequestException('Invalid id');
     }
 
-    if (dto.usuario_asignado) {
-      const assigned = await this.prisma.user.findUnique({
-        where: { id: dto.usuario_asignado },
-        select: { id: true },
-      });
-      if (!assigned) {
-        throw new BadRequestException(
-          `usuario_asignado no existe en User.id: ${dto.usuario_asignado}`,
-        );
-      }
-    }
+    const usuarioAsignadoId = dto.usuario_asignado
+      ? await this.resolveUserIdFromIdOrUsername(dto.usuario_asignado)
+      : null;
 
     const data: Prisma.tareasUpdateInput = {
-      ...dto,
+      titulo: dto.titulo,
+      descripcion: dto.descripcion,
+      estatus: dto.estatus,
       fecha_limite: dto.fecha_limite ? new Date(dto.fecha_limite) : undefined,
+      ...(usuarioAsignadoId
+        ? {
+            usuarioAsignado: {
+              connect: { id: usuarioAsignadoId },
+            },
+          }
+        : null),
     };
 
     try {

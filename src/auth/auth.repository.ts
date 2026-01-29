@@ -20,7 +20,10 @@ export class AuthRepository {
       cargoNivel.includes('admin') ||
       cargoNombre.includes('admin');
 
-    return isAdmin ? ['ADMIN'] : ['USER'];
+    if (isAdmin) return ['ADMIN'];
+
+    const isJefe = cargoNivel.includes('jefe') || cargoNombre.includes('jefe');
+    return isJefe ? ['JEFE'] : ['USER'];
   }
 
   async validateUser(username: string, password: string) {

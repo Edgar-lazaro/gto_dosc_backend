@@ -17,14 +17,45 @@ export class DocumentosPdfService {
     private readonly glpiQueue: GlpiQueueService,
   ) {}
 
-  async findAll() {
+  private isAdmin(roles: string[] | undefined): boolean {
+    return Array.isArray(roles) && roles.some(r => String(r).toUpperCase() === 'ADMIN');
+  }
+
+  private isJefe(roles: string[] | undefined): boolean {
+    return Array.isArray(roles) && roles.some(r => String(r).toUpperCase() === 'JEFE');
+  }
+
+  async findAllForUser(userId: string, roles: string[], gerenciaId: number | null, jefaturaId: number | null) {
     const rows = await this.prisma.documentos_pdf.findMany({
+      where: this.isAdmin(roles)
+        ? gerenciaId === null
+          ? { usuario_id: userId }
+          : { gerencia_id: gerenciaId }
+        : this.isJefe(roles)
+          ? jefaturaId === null
+            ? { usuario_id: userId }
+            : { jefatura_id: jefaturaId }
+          : { usuario_id: userId },
       orderBy: { fecha_creacion: 'desc' },
     });
     return serializeBigInt(rows);
   }
 
-  async findOne(idRaw: string) {
+  async findMine(userId: string) {
+    const rows = await this.prisma.documentos_pdf.findMany({
+      where: { usuario_id: userId },
+      orderBy: { fecha_creacion: 'desc' },
+    });
+    return serializeBigInt(rows);
+  }
+
+  async findOneForUser(
+    idRaw: string,
+    userId: string,
+    roles: string[],
+    gerenciaId: number | null,
+    jefaturaId: number | null,
+  ) {
     let id: bigint;
     try {
       id = parseBigIntId(idRaw);
@@ -34,19 +65,45 @@ export class DocumentosPdfService {
 
     const row = await this.prisma.documentos_pdf.findUnique({ where: { id } });
     if (!row) throw new NotFoundException('Not found');
+
+    if (this.isAdmin(roles)) {
+      if (gerenciaId === null) {
+        // Si no tenemos gerencia en JWT, degradar a comportamiento seguro.
+        if (row.usuario_id !== userId) throw new NotFoundException('Not found');
+      } else if (row.gerencia_id !== gerenciaId) {
+        throw new NotFoundException('Not found');
+      }
+    } else if (this.isJefe(roles)) {
+      if (jefaturaId === null) {
+        if (row.usuario_id !== userId) throw new NotFoundException('Not found');
+      } else if (row.jefatura_id !== jefaturaId) {
+        throw new NotFoundException('Not found');
+      }
+    } else {
+      if (row.usuario_id !== userId) throw new NotFoundException('Not found');
+    }
+
     return serializeBigInt(row);
   }
 
-  async create(userId: string, dto: CreateDocumentoPdfDto) {
+  async create(
+    userId: string,
+    identity: { username: string; gerenciaId: number | null; jefaturaId: number | null },
+    dto: CreateDocumentoPdfDto,
+  ) {
+    const usuarioNombre = identity.username.length > 0 ? identity.username : dto.usuario_nombre;
+    const gerenciaId = identity.gerenciaId ?? dto.gerencia_id;
+    const jefaturaId = identity.jefaturaId ?? dto.jefatura_id;
+
     const created = await this.prisma.documentos_pdf.create({
       data: {
         nombre_archivo: dto.nombre_archivo,
         tipo_documento: dto.tipo_documento,
         url_storage: dto.url_storage,
         usuario_id: userId,
-        usuario_nombre: dto.usuario_nombre,
-        gerencia_id: dto.gerencia_id,
-        jefatura_id: dto.jefatura_id,
+        usuario_nombre: usuarioNombre,
+        gerencia_id: gerenciaId,
+        jefatura_id: jefaturaId,
         checklist_nombre: dto.checklist_nombre,
         tamano_bytes: dto.tamano_bytes ? BigInt(dto.tamano_bytes) : undefined,
       },
